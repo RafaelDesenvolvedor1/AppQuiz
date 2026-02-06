@@ -1,6 +1,6 @@
 # 🧠 AppQuiz - Trivia Challenge
 
-![Demonstração do App](caminho/para/seu/arquivo.gif)
+![Demonstração do App](demonstracao.gif)
 
 [![Nível](https://img.shields.io/badge/N%C3%ADvel-Iniciante%20Pro-blue)](#)
 [![Tech](https://img.shields.io/badge/Tech-Android%20Java-blue)](#)
