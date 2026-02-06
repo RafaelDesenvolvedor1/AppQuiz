@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#262626"
+    tools:context=".MainActivity" >
+
+    <TextView
+        android:id="@+id/txtQuest"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="32dp"
+        android:layout_marginEnd="32dp"
+        android:text="A pergunta"
+        android:textColor="#E7E7E7"
+        android:textSize="24sp"
+        app:layout_constraintEnd_toEndOf="@+id/btnProximo"
+        app:layout_constraintStart_toStartOf="@+id/radioGroup"
+        tools:ignore="MissingConstraints"
+        tools:layout_editor_absoluteY="40dp" />
+
+    <RadioGroup
+        android:id="@+id/radioGroup"
+        android:layout_width="257dp"
+        android:layout_height="202dp"
+        android:layout_marginStart="32dp"
+        android:layout_marginEnd="458dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/txtQuest"
+        tools:ignore="MissingConstraints">
+
+        <RadioButton
+            android:id="@+id/rbOptA"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="RadioButton"
+            android:textColor="@color/white" />
+
+        <RadioButton
+            android:id="@+id/rbOptB"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="RadioButton"
+            android:textColor="@color/white" />
+
+        <RadioButton
+            android:id="@+id/rbOptC"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="RadioButton"
+            android:textColor="@color/white" />
+
+        <RadioButton
+            android:id="@+id/rbOptD"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="RadioButton"
+            android:textColor="@color/white" />
+    </RadioGroup>
+
+    <Button
+        android:id="@+id/btnProximo"
+        android:onClick="pressOk"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="48dp"
+        android:layout_marginBottom="16dp"
+        android:text="Ok"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/radioGroup"
+        app:layout_constraintVertical_bias="1.0" />
+
+    <TextView
+        android:id="@+id/txtProgress"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="1/10"
+        android:textColor="#FFFFFF"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/txtQuest" />
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        style="?android:attr/progressBarStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+</androidx.constraintlayout.widget.ConstraintLayout>
