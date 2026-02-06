@@ -2,7 +2,7 @@
 
 ![Demonstração do App](caminho/para/seu/arquivo.gif)
 
-[![Nível](https://img.shields.io/badge/N%C3%ADvel-Intermedi%C3%A1rio-orange)](#)
+[![Nível](https://img.shields.io/badge/N%C3%ADvel-Iniciante%20Pro-blue)](#)
 [![Tech](https://img.shields.io/badge/Tech-Android%20Java-blue)](#)
 [![API](https://img.shields.io/badge/API-Open%20Trivia%20DB-green)](#)
 
