@@ -35,4 +35,18 @@ URL url = new URL("[https://opentdb.com/api.php?amount=10&type=multiple](https:/
 HttpURLConnection conexao = (HttpURLConnection) url.openConnection();
 conexao.setRequestMethod("GET");
 conexao.connect();
+````
+## UX & Feedback
+Implementei um fluxo onde o usuário nunca fica "no escuro". O ProgressBar é ativado no início da requisição e desativado apenas quando os dados estão prontos para serem renderizados na tela. No final do ciclo de 10 perguntas, um AlertDialog resume a performance do jogador.
+
+## 📈 Evolução Pessoal
+Este projeto marca minha transição da manipulação de estados locais para a arquitetura cliente/servidor no ecossistema Android. A decisão de substituir listas estáticas por uma requisição HTTP me permitiu lidar com:
+
+1. **Parsing de JSON complexo.**
+
+2. **Gerenciamento de Threads para operações de rede.**
+
+3. **Tratamento de exceções em tempo real.**
+
+Desenvolvido com foco em aprendizado e boas práticas por [ Rafael Santos ](https://rafaeldev2001.com).
 
