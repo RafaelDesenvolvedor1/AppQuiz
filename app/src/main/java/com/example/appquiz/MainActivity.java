@@ -83,34 +83,22 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void loadQuests(){
-
+    private void loadQuests() {
         runOnUiThread(this::mostrarLoading);
 
-        new Thread(()->{
+        new Thread(() -> {
             try {
-                URL url = new URL("https://opentdb.com/api.php?amount=10&type=multiple");
-                HttpURLConnection conexao = (HttpURLConnection) url.openConnection();
-                conexao.setRequestMethod("GET");
-                conexao.connect();
+                // Instancia a classe passando a URL
+                HttpRequest request = new HttpRequest("https://opentdb.com/api.php?amount=10&type=multiple");
 
-                BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(conexao.getInputStream())
-                );
+                // Chama o método que faz todo o processo de conexão e retorna a String
+                String respostaJson = request.executar();
 
-                StringBuilder json = new StringBuilder();
-                String linha;
-
-                while ((linha = reader.readLine()) != null){
-                    json.append(linha);
-                }
-
-                reader.close();
-
-                JSONObject jsonObject = new JSONObject(json.toString());
+                // Agora você faz o "Trabalho de Inteligência" (Parse do JSON)
+                JSONObject jsonObject = new JSONObject(respostaJson);
                 JSONArray results = jsonObject.getJSONArray("results");
 
-                for (int i=0; i<results.length(); i++){
+                for (int i = 0; i < results.length(); i++) {
                     JSONObject item = results.getJSONObject(i);
 
                     String pergunta = item.getString("question");
@@ -121,7 +109,7 @@ public class MainActivity extends AppCompatActivity {
 
                     alternativas.add(correta);
 
-                    for(int j=0; j<incorretasJson.length(); j++){
+                    for (int j = 0; j < incorretasJson.length(); j++) {
                         alternativas.add(incorretasJson.getString(j));
                     }
 
@@ -130,21 +118,18 @@ public class MainActivity extends AppCompatActivity {
                     listaDePerguntas.add(
                             new Pergunta(pergunta, correta, alternativas)
                     );
-
-
                 }
 
-                runOnUiThread(()->{
+                runOnUiThread(() -> {
                     esconderLoading();
                     indicePerguntaAtual = 0;
                     mostrarPergunta();
-
                     progresso();
                 });
 
-
             } catch (Exception e) {
-                Log.e("API_ERROR", e.getMessage());
+                // Se der erro na conexão lá na classe HttpRequest, ele cai aqui
+                Log.e("API_ERROR", "Erro na requisição: " + e.getMessage());
             }
         }).start();
     }
