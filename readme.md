@@ -2,7 +2,7 @@
 
 ![Demonstração do App](./update1.1/parte1.gif) ![Feedback](./update1.1/parte2.gif)
 
-[![Nível](https://img.shields.io/badge/N%C3%ADvel-Intermedi%C3%A1rio-blue)](#)
+[![Nível](https://img.shields.io/badge/N%C3%ADvel-Iniciante-blue)](#)
 [![Tech](https://img.shields.io/badge/Tech-Android%20Java-blue)](#)
 [![Backend](https://img.shields.io/badge/Backend-Node.js%20Express-green)](#)
 
