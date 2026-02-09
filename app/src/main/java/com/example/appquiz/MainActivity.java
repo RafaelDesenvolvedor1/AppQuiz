@@ -1,5 +1,6 @@
 package com.example.appquiz;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.Html;
 import android.util.Log;
@@ -9,6 +10,7 @@ import android.widget.ProgressBar;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AlertDialog;
@@ -20,41 +22,22 @@ import androidx.core.view.WindowInsetsCompat;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
-import retrofit2.Retrofit;
-import retrofit2.converter.gson.GsonConverterFactory;
-
 public class MainActivity extends AppCompatActivity {
 
     private ProgressBar progressLoading;
-
-    private TextView txtPergunta;
-
-    private TextView txtProgresso;
+    private TextView txtPergunta, txtProgresso;
     private RadioGroup rgOpcoes;
     private RadioButton opt1, opt2, opt3, opt4;
     private Button btnProxima;
 
     private List<Pergunta> listaDePerguntas = new ArrayList<>();
     private int indicePerguntaAtual = 0;
-
     private int score = 0;
-
     private boolean respostaMostrada = false;
-
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,7 +45,7 @@ public class MainActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
-        // Inicializando os componentes
+        // Inicialização dos componentes
         txtPergunta = findViewById(R.id.txtQuest);
         txtProgresso = findViewById(R.id.txtProgress);
         opt1 = findViewById(R.id.rbOptA);
@@ -70,7 +53,6 @@ public class MainActivity extends AppCompatActivity {
         opt3 = findViewById(R.id.rbOptC);
         opt4 = findViewById(R.id.rbOptD);
         btnProxima = findViewById(R.id.btnProximo);
-        // Não esqueça de vincular o RadioGroup se ele existir no XML
         rgOpcoes = findViewById(R.id.radioGroup);
         progressLoading = findViewById(R.id.progressBar);
 
@@ -86,213 +68,189 @@ public class MainActivity extends AppCompatActivity {
     private void loadQuests() {
         runOnUiThread(this::mostrarLoading);
 
+        String url;
+        String p_idioma = getIntent().getStringExtra("p_idioma");
+        int p_categoria = getIntent().getIntExtra("p_categoria", 0);
+
+        if(p_idioma == null) p_idioma = "en";
+
+        url = "http://10.0.2.2:3000/quiz/" + p_idioma;
+
+        if (p_categoria > 0) {
+            url += "/" + p_categoria;
+        }
+
+       final String urlRequest = url;
+
         new Thread(() -> {
             try {
-                // Instancia a classe passando a URL
-                HttpRequest request = new HttpRequest("https://opentdb.com/api.php?amount=10&type=multiple");
-
-                // Chama o método que faz todo o processo de conexão e retorna a String
+                HttpRequest request = new HttpRequest(urlRequest);
                 String respostaJson = request.executar();
 
-                // Agora você faz o "Trabalho de Inteligência" (Parse do JSON)
-                JSONObject jsonObject = new JSONObject(respostaJson);
-                JSONArray results = jsonObject.getJSONArray("results");
+                Log.d("API_DEBUG", "Resposta recebida: " + respostaJson);
+
+                // Converter a resposta diretamente para JSONArray
+                JSONArray results = new JSONArray(respostaJson);
+
+                listaDePerguntas.clear();
 
                 for (int i = 0; i < results.length(); i++) {
                     JSONObject item = results.getJSONObject(i);
 
-                    String pergunta = item.getString("question");
-                    String correta = item.getString("correct_answer");
+                    // Nomes das chaves batendo com o LogCat
+                    String pergunta = item.getString("pergunta");
+                    String correta = item.getString("resposta_correta");
+                    JSONArray todasRespostasJson = item.getJSONArray("todas_respostas");
 
-                    JSONArray incorretasJson = item.getJSONArray("incorrect_answers");
                     List<String> alternativas = new ArrayList<>();
-
-                    alternativas.add(correta);
-
-                    for (int j = 0; j < incorretasJson.length(); j++) {
-                        alternativas.add(incorretasJson.getString(j));
+                    for (int j = 0; j < todasRespostasJson.length(); j++) {
+                        alternativas.add(todasRespostasJson.getString(j));
                     }
 
-                    embaralharLista(alternativas);
-
-                    listaDePerguntas.add(
-                            new Pergunta(pergunta, correta, alternativas)
-                    );
+                    listaDePerguntas.add(new Pergunta(pergunta, correta, alternativas));
                 }
 
                 runOnUiThread(() -> {
                     esconderLoading();
-                    indicePerguntaAtual = 0;
-                    mostrarPergunta();
-                    progresso();
+                    if (!listaDePerguntas.isEmpty()) {
+                        indicePerguntaAtual = 0;
+                        mostrarPergunta();
+                        progresso();
+                    }
                 });
 
             } catch (Exception e) {
-                // Se der erro na conexão lá na classe HttpRequest, ele cai aqui
-                Log.e("API_ERROR", "Erro na requisição: " + e.getMessage());
+                Log.e("API_ERROR", "Erro: " + e.getMessage());
+                runOnUiThread(() -> {
+                    esconderLoading();
+                    Toast.makeText(this, "Erro ao conectar com a API", Toast.LENGTH_LONG).show();
+                });
             }
         }).start();
     }
 
-    public void pressOk(View view){
+    private void mostrarPergunta() {
+        if (listaDePerguntas.isEmpty()) return;
 
-        if(rgOpcoes.getCheckedRadioButtonId() == -1){
+        Pergunta p = listaDePerguntas.get(indicePerguntaAtual);
+        List<String> alts = p.getAlternativas();
+
+        // Limpa o estado anterior
+        rgOpcoes.clearCheck();
+        respostaMostrada = false;
+        resetarCores();
+
+        // Define os textos (Usa Html.fromHtml para caracteres especiais)
+        txtPergunta.setText(Html.fromHtml(p.getPergunta()));
+
+        // Segurança: verifica se existem as 4 alternativas antes de setar
+        if (alts.size() >= 4) {
+            opt1.setText(Html.fromHtml(alts.get(0)));
+            opt2.setText(Html.fromHtml(alts.get(1)));
+            opt3.setText(Html.fromHtml(alts.get(2)));
+            opt4.setText(Html.fromHtml(alts.get(3)));
+        }
+    }
+
+    private void progresso() {
+        // Correção da concatenação para evitar erros de String.valueOf
+        String textoProgresso = (indicePerguntaAtual + 1) + "/" + listaDePerguntas.size();
+        txtProgresso.setText(textoProgresso);
+    }
+
+    public void pressOk(View view) {
+        if (rgOpcoes.getCheckedRadioButtonId() == -1) {
+            Toast.makeText(this, "Selecione uma opção!", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        if(!respostaMostrada){
+        if (!respostaMostrada) {
             mostrarFeedback();
             btnProxima.setText("Próxima");
             respostaMostrada = true;
-        }else{
+        } else {
             btnProxima.setText("Ok");
             respostaMostrada = false;
-            resetarCores();
-
             indicePerguntaAtual++;
 
-            if(indicePerguntaAtual < listaDePerguntas.size()){
+            if (indicePerguntaAtual < listaDePerguntas.size()) {
+                resetarCores();
                 mostrarPergunta();
-            }else{
-                exibirResultado("Quiz finalizado!", "Score: "+String.valueOf(score));
+                progresso();
+            } else {
+                exibirResultado("Quiz finalizado!", "Score: " + score);
                 mostrarOcultar(false);
             }
-
-            progresso();
         }
-
     }
 
-    private void mostrarFeedback(){
+    private void mostrarFeedback() {
         int idSelecionado = rgOpcoes.getCheckedRadioButtonId();
         RadioButton selecionado = findViewById(idSelecionado);
-
         Pergunta perguntaAtual = listaDePerguntas.get(indicePerguntaAtual);
-
         String respostaUsuario = selecionado.getText().toString();
 
-        if(respostaUsuario.equals(perguntaAtual.getCorreta())){
+        if (respostaUsuario.equals(perguntaAtual.getCorreta())) {
             selecionado.setTextColor(getResources().getColor(android.R.color.holo_green_dark));
             score++;
-        }else{
+        } else {
             selecionado.setTextColor(getResources().getColor(android.R.color.holo_red_dark));
             destacarRespostaCorreta(perguntaAtual);
         }
 
-        for(int i = 0; i < rgOpcoes.getChildCount(); i++){
+        for (int i = 0; i < rgOpcoes.getChildCount(); i++) {
             rgOpcoes.getChildAt(i).setEnabled(false);
         }
     }
 
-    private void destacarRespostaCorreta(Pergunta pergunta){
-        for(int i = 0; i < rgOpcoes.getChildCount(); i++){
+    private void destacarRespostaCorreta(Pergunta pergunta) {
+        for (int i = 0; i < rgOpcoes.getChildCount(); i++) {
             RadioButton rb = (RadioButton) rgOpcoes.getChildAt(i);
-            if(rb.getText().toString().equals(pergunta.getCorreta())){
+            if (rb.getText().toString().equals(pergunta.getCorreta())) {
                 rb.setTextColor(getResources().getColor(android.R.color.holo_green_dark));
             }
         }
     }
 
-    private void resetarCores(){
-        for(int i = 0; i < rgOpcoes.getChildCount(); i++){
+    private void resetarCores() {
+        for (int i = 0; i < rgOpcoes.getChildCount(); i++) {
             RadioButton rb = (RadioButton) rgOpcoes.getChildAt(i);
             rb.setTextColor(getResources().getColor(android.R.color.white));
             rb.setEnabled(true);
         }
     }
 
-
-
-    private void calcularScore(){
-        int idSelecionado = rgOpcoes.getCheckedRadioButtonId();
-
-        RadioButton selecionado = findViewById(idSelecionado);
-        String respostaUsuario = selecionado.getText().toString();
-
-        Pergunta perguntaAtual = listaDePerguntas.get(indicePerguntaAtual);
-
-        if(respostaUsuario.equals(perguntaAtual.getCorreta())){
-            score++;
-        }
-    }
-
-    private void mostrarPergunta(){
-
-        if (listaDePerguntas.isEmpty()) return;
-
-        Pergunta p= listaDePerguntas.get(indicePerguntaAtual);
-
-        txtPergunta.setText(Html.fromHtml(p.getPergunta()));
-
-        opt1.setText(Html.fromHtml(p.getAlternativas().get(0)));
-        opt2.setText(Html.fromHtml(p.getAlternativas().get(1)));
-        opt3.setText(Html.fromHtml(p.getAlternativas().get(2)));
-        opt4.setText(Html.fromHtml(p.getAlternativas().get(3)));
-
-        rgOpcoes.clearCheck();
-        respostaMostrada = false;
-        resetarCores();
-    }
-
-    private void progresso(){
-        txtProgresso.setText(String.valueOf(indicePerguntaAtual+1 + "/" + listaDePerguntas.size()));
-    }
-
-    private void exibirResultado(String title, String message){
-       new AlertDialog.Builder(this)
-               .setTitle(title)
-               .setMessage(message)
-               .setCancelable(false)
-               .setPositiveButton("Reiniciar", (dialog, which)->{
-                   reiniciarQuiz();
-               })
-               .setNegativeButton("Sair", (dialog, which) -> {
-                   finish();
-               })
-               .show();
-    }
-
-    private void reiniciarQuiz(){
+    private void reiniciarQuiz() {
         score = 0;
         indicePerguntaAtual = 0;
-
-        progresso();
-
-        embaralharLista(listaDePerguntas);
-
-        mostrarPergunta();
-
-        mostrarOcultar(true);
+        loadQuests(); // Recarrega do servidor
     }
 
-    private void mostrarOcultar(boolean opcao){
-        if(opcao){
-            txtPergunta.setVisibility(View.VISIBLE);
-            txtProgresso.setVisibility(View.VISIBLE);
-            rgOpcoes.setVisibility(View.VISIBLE);
-            btnProxima.setEnabled(true);
-        }else{
-            txtPergunta.setVisibility(View.GONE);
-            txtProgresso.setVisibility(View.GONE);
-            rgOpcoes.setVisibility(View.GONE);
-            btnProxima.setEnabled(false);
-        }
+    private void exibirResultado(String title, String message) {
+        new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setMessage(message)
+                .setCancelable(false)
+                .setPositiveButton("Reiniciar", (dialog, which) -> reiniciarQuiz())
+                .setNegativeButton("Sair", (dialog, which) -> finish())
+                .show();
     }
 
-    private <T> void embaralharLista(List<T> lista ){
-        Collections.shuffle(lista);
+    private void mostrarOcultar(boolean opcao) {
+        int visibilidade = opcao ? View.VISIBLE : View.GONE;
+        txtPergunta.setVisibility(visibilidade);
+        txtProgresso.setVisibility(visibilidade);
+        rgOpcoes.setVisibility(visibilidade);
+        btnProxima.setVisibility(visibilidade);
     }
 
-    private void mostrarLoading(){
+    private void mostrarLoading() {
         progressLoading.setVisibility(View.VISIBLE);
         mostrarOcultar(false);
     }
 
-    private void esconderLoading(){
+    private void esconderLoading() {
         progressLoading.setVisibility(View.GONE);
         mostrarOcultar(true);
     }
-
-
 }
-

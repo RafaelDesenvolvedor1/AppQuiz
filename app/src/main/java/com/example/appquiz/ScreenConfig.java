@@ -12,59 +12,86 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 public class ScreenConfig extends AppCompatActivity {
 
-    private Spinner selectIdiomas;
-    private Spinner selectCategorias;
+    private Spinner selectIdiomas, selectCategorias;
+    private List<IdiomaItem> listaIdiomas = new ArrayList<>();
+    private List<CategoriaItem> listaCategorias = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        EdgeToEdge.enable(this);
         setContentView(R.layout.activity_screen_config);
 
         selectIdiomas = findViewById(R.id.spinnerIdiomas);
         selectCategorias = findViewById(R.id.spinnerCategorias);
 
-        configurarSpinnerIdiomas();
-        configurarSpinnerCategorias();
-
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-            return insets;
-        });
+        // Busca os dados da API Node
+        carregarDadosDaAPI();
     }
 
-    private void configurarSpinnerIdiomas() {
-        List<String> idiomas = new ArrayList<>();
-        idiomas.add("Português");
-        idiomas.add("Inglês");
+    private void carregarDadosDaAPI() {
+        new Thread(() -> {
+            try {
+                // 1. Carregar Idiomas (Rota: /quiz/idiomas)
+                String jsonIdiomas = new HttpRequest("http://10.0.2.2:3000/quiz/idiomas").executar();
+                JSONObject objIdiomas = new JSONObject(jsonIdiomas);
 
-        // O ArrayAdapter liga a sua lista ao layout visual do Android
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, idiomas);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        selectIdiomas.setAdapter(adapter);
+                listaIdiomas.clear();
+                // A lib google-translate-api-x retorna um objeto onde a chave é o código
+                Iterator<String> keys = objIdiomas.keys();
+                while(keys.hasNext()) {
+                    String cod = keys.next();
+                    String nome = objIdiomas.getString(cod);
+                    listaIdiomas.add(new IdiomaItem(cod, nome));
+                }
+
+                // 2. Carregar Categorias (Rota: /quiz/categorias)
+                String jsonCats = new HttpRequest("http://10.0.2.2:3000/quiz/categorias").executar();
+                JSONArray arrayCats = new JSONArray(jsonCats);
+
+                listaCategorias.clear();
+                listaCategorias.add(new CategoriaItem(0, "Todas as Categorias")); // Opção padrão
+                for (int i = 0; i < arrayCats.length(); i++) {
+                    JSONObject c = arrayCats.getJSONObject(i);
+                    listaCategorias.add(new CategoriaItem(c.getInt("id"), c.getString("name")));
+                }
+
+                // Atualiza a UI
+                runOnUiThread(this::configurarSpinners);
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }).start();
     }
 
-    private void configurarSpinnerCategorias() {
-        List<String> categorias = new ArrayList<>();
-        categorias.add("Geral");
-        categorias.add("Ciência");
-        categorias.add("História");
-        categorias.add("Geografia");
+    private void configurarSpinners() {
+        ArrayAdapter<IdiomaItem> adapterIdio = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, listaIdiomas);
+        selectIdiomas.setAdapter(adapterIdio);
 
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, categorias);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        selectCategorias.setAdapter(adapter);
+        ArrayAdapter<CategoriaItem> adapterCat = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, listaCategorias);
+        selectCategorias.setAdapter(adapterCat);
     }
-
 
     public void jogar(View v){
-        Intent it_mainActivity = new Intent(this, MainActivity.class );
-        startActivity(it_mainActivity);
+        // Pega os objetos selecionados
+        IdiomaItem idiomaSel = (IdiomaItem) selectIdiomas.getSelectedItem();
+        CategoriaItem categoriaSel = (CategoriaItem) selectCategorias.getSelectedItem();
+
+        Intent it = new Intent(this, MainActivity.class);
+        it.putExtra("p_idioma", idiomaSel.codigo);
+
+        // Se for 0 (Todas), passamos null ou tratamos na MainActivity
+        it.putExtra("p_categoria", categoriaSel.id);
+
+        startActivity(it);
     }
 }
